@@ -20,6 +20,10 @@ exports.getGoals = async (req, res) => {
 exports.addGoal = async (req, res) => {
   const { title, description, deadline } = req.body;
 
+  if (!title) {
+    return res.render('goals', { error_msg: 'Title is required' });
+  }
+
   try {
     const newGoal = new Goal({
       title,
@@ -29,6 +33,7 @@ exports.addGoal = async (req, res) => {
     });
 
     await newGoal.save();
+    req.flash('success_msg', 'Goal added!');
     res.redirect('/goals');
   } catch (error) {
     console.error(error);
@@ -38,7 +43,13 @@ exports.addGoal = async (req, res) => {
 
 exports.deleteGoal = async (req, res) => {
   try {
-    await Goal.findByIdAndDelete(req.params.id);
+    const goal = await Goal.findById(req.params.id);
+    if (!goal || goal.user.toString() !== req.user.id) {
+      return res.status(403).send('Unauthorized');
+    }
+
+    await goal.deleteOne();
+    req.flash('success_msg', 'Goal deleted!');
     res.redirect('/goals');
   } catch (error) {
     console.error(error);
@@ -49,6 +60,10 @@ exports.deleteGoal = async (req, res) => {
 exports.editGoalForm = async (req, res) => {
   try {
     const goal = await Goal.findById(req.params.id);
+    if (!goal || goal.user.toString() !== req.user.id) {
+      return res.status(403).send('Unauthorized');
+    }
+
     res.render('editGoal', { goal });
   } catch (err) {
     console.error(err);
@@ -57,11 +72,20 @@ exports.editGoalForm = async (req, res) => {
 };
 
 exports.updateGoal = async (req, res) => {
-  try {
-    const { title, description, deadline } = req.body;
+  const { title, description, deadline } = req.body;
 
-    const parsedDeadline = new Date(deadline);
-    await Goal.findByIdAndUpdate(req.params.id, { title, description, deadline: parsedDeadline });
+  try {
+    const goal = await Goal.findById(req.params.id);
+    if (!goal || goal.user.toString() !== req.user.id) {
+      return res.status(403).send('Unauthorized');
+    }
+
+    goal.title = title;
+    goal.description = description;
+    goal.deadline = deadline;
+    await goal.save();
+
+    req.flash('success_msg', 'Goal updated!');
     res.redirect('/goals');
   } catch (err) {
     console.error(err);

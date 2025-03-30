@@ -278,7 +278,7 @@ h1, h2 {
   background: #b02a37;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 760px) {
   header {
       flex-direction: column;
       text-align: center;
